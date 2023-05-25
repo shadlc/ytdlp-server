@@ -230,6 +230,14 @@
       }
     })
 
+    function isJson(str) {
+    try {
+      JSON.parse(str);
+    } catch(e) {
+      return false;
+    }
+      return true;
+    }
     function get(url, callback, user=true){
       let ajax = new XMLHttpRequest();
       ajax.open("GET", url, true);
@@ -256,19 +264,17 @@
             if (typeof callback === 'function') {
               callback(null);
             }
-          } else if(ajax.status == 500) {
-            document.querySelector(".search-notify").innerHTML = "内部错误！不支持此URL！";
-            if (typeof callback === 'function') {
-              callback(null);
-            }
           } else if (ajax.status != 200) {
-            data = JSON.parse(ajax.responseText);
+            data.status = "内部错误！"
+            if (isJson(ajax.responseText)) {
+              data = JSON.parse(ajax.responseText);
+            }
             let div = "<p>" + data.status + "</p>"
             if (user) {
               document.querySelector(".search-notify").innerHTML = div;
             }
             if (typeof callback === 'function') {
-              callback(data);
+              callback(null);
             }
           }
         }
@@ -414,7 +420,9 @@
         url = document.getElementById("url_input").value;
       }
       get(infoUrl + url,(e)=>{
-        show_video_info(e.data);
+        if (e != null) {
+          show_video_info(e.data);
+        }
         requesting_mode(false);
       });
     }
@@ -432,7 +440,9 @@
 
     function query_history(status=false){
       get(historyUrl, (he)=>{
-        show_video_card(he.data, ".video-history-list");
+        if (he != null) {
+          show_video_card(he.data, ".video-history-list");
+        }
       }, status);
     }
     function query_download(status=false){

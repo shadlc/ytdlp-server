@@ -138,9 +138,13 @@ class YTDLP():
     elif 'qq' in url and os.path.exists("cookies/qqvideo.txt"):
       self.opts['cookiefile'] = "cookies/qqvideo.txt"
     opts = self.opts.copy()
-    opts['paths'] = {'home':self.download_dir}
-    opts['outtmpl']['default'] = "[" + info['uploader'] + "] " + self.outtmpl['default']
-    opts['outtmpl']['chapter'] = "[" + info['uploader'] + "] " + self.outtmpl['chapter']
+    if info['type'] == 'video':
+      opts['paths'] = {'home':self.download_dir}
+    else:
+      opts['paths'] = {'home':self.download_dir + info['title']}
+    if 'uploader' in info:
+      opts['outtmpl']['default'] = "[" + info['uploader'] + "] " + self.outtmpl['default']
+      opts['outtmpl']['chapter'] = "[" + info['uploader'] + "] " + self.outtmpl['chapter']
     # port = find_available_port()
     # if port:
     #   md5 = sum_md5(url)
@@ -163,69 +167,72 @@ class YTDLP():
 
   def info(self, url, mode='essential'):
     '''get informations from url'''
-    if 'bilibili' in url and os.path.exists("cookies/bilibili.txt"):
-      self.opts['cookiefile'] = "cookies/bilibili.txt"
-    elif 'youtube' in url and os.path.exists("cookies/youtube.txt"):
-      self.opts['cookiefile'] = "cookies/youtube.txt"
-    elif 'qq' in url and os.path.exists("cookies/qqvideo.txt"):
-      self.opts['cookiefile'] = "cookies/qqvideo.txt"
-    extract_info = YoutubeDL(self.opts).extract_info(url, download=False)
-    if mode == 'raw':
-      return {'status': 'Success', 'data': extract_info}
-    info = {}
-    if 'entries' in extract_info:
-      info['type'] = 'playlist'
-      info['title'] = extract_info.get('title')
-      info['count'] = len(extract_info.get('entries'))
-      info['entires'] = []
-      for i in range(info['count']):
-        entries = extract_info.get('entries')
-        item = {}
-        item['title'] = entries[i].get('title')
-        item['site'] = entries[i].get('extractor')
-        item['thumbnail'] = entries[i].get('thumbnail')
-        item['uploader'] = entries[i].get('uploader')
-        item['id'] = entries[i].get('display_id')
-        item['duration'] = entries[i].get('duration')
-        item['resolution'] = entries[i].get('resolution')
-        item['ext'] = entries[i].get('ext')
-        item['url'] = entries[i].get('webpage_url')
-        item['size'] = entries[i].get('filesize_approx')
-        info['entires'].append(item)
-    else:
-      info['type'] = 'video'
-      info['title'] = extract_info.get('title')
-      info['site'] = extract_info.get('extractor')
-      info['thumbnail'] = extract_info.get('thumbnail')
-      info['uploader'] = extract_info.get('uploader')
-      info['id'] = extract_info.get('display_id')
-      info['duration'] = extract_info.get('duration')
-      info['resolution'] = extract_info.get('resolution')
-      info['ext'] = extract_info.get('ext')
-      info['url'] = extract_info.get('webpage_url')
-      info['size'] = extract_info.get('filesize_approx')
-    if mode == 'essential':
-      return {'status': 'Success', 'data': info}
-    else:
-      return {'status': 'Success', 'data': info}
     try:
-      pass
+      if 'bilibili' in url and os.path.exists("cookies/bilibili.txt"):
+        self.opts['cookiefile'] = "cookies/bilibili.txt"
+      elif 'youtube' in url and os.path.exists("cookies/youtube.txt"):
+        self.opts['cookiefile'] = "cookies/youtube.txt"
+      elif 'qq' in url and os.path.exists("cookies/qqvideo.txt"):
+        self.opts['cookiefile'] = "cookies/qqvideo.txt"
+      extract_info = YoutubeDL(self.opts).extract_info(url, download=False)
+      if mode == 'raw':
+        return {'status': 'Success', 'data': extract_info}
+      info = {}
+      if 'entries' in extract_info:
+        info['type'] = 'playlist'
+        info['title'] = extract_info.get('title')
+        info['count'] = len(extract_info.get('entries'))
+        info['entires'] = []
+        for i in range(info['count']):
+          entries = extract_info.get('entries')
+          item = {}
+          item['title'] = entries[i].get('title')
+          item['site'] = entries[i].get('extractor')
+          item['thumbnail'] = entries[i].get('thumbnail')
+          item['uploader'] = entries[i].get('uploader')
+          item['id'] = entries[i].get('display_id')
+          item['duration'] = entries[i].get('duration')
+          item['resolution'] = entries[i].get('resolution')
+          item['ext'] = entries[i].get('ext')
+          item['url'] = entries[i].get('webpage_url')
+          item['size'] = entries[i].get('filesize_approx')
+          info['entires'].append(item)
+      else:
+        info['type'] = 'video'
+        info['title'] = extract_info.get('title')
+        info['site'] = extract_info.get('extractor')
+        info['thumbnail'] = extract_info.get('thumbnail')
+        info['uploader'] = extract_info.get('uploader')
+        info['id'] = extract_info.get('display_id')
+        info['duration'] = extract_info.get('duration')
+        info['resolution'] = extract_info.get('resolution')
+        info['ext'] = extract_info.get('ext')
+        info['url'] = extract_info.get('webpage_url')
+        info['size'] = extract_info.get('filesize_approx')
+      if mode == 'essential':
+        return {'status': 'Success', 'data': info}
+      else:
+        return {'status': 'Success', 'data': info}
     except:
       return {'status': 'Invaid URL', 'data': ''}
 
   def start(self, url):
     '''detect url and start download'''
-    try:
-      info = self.info(url)['data']
+    info = self.info(url)['data']
+    if 'url' in info:
       url = info['url']
-      if url[-1] == '/':
-        url = url[:-1]
-      if url in self.download_list:
-        return self.task_status()
-      else:
-        threading.Thread(target=self.download_thread, args=(url, info), daemon=True).start()
-        self.status = 'Added'
-        return {'status': self.status, 'data': info}
+    elif 'webpage_url' in info:
+      url = info['webpage_url']
+    if url[-1] == '/':
+      url = url[:-1]
+    if url in self.download_list:
+      return self.task_status()
+    else:
+      threading.Thread(target=self.download_thread, args=(url, info), daemon=True).start()
+      self.status = 'Added'
+      return {'status': self.status, 'data': info}
+    try:
+      pass
     except:
       return {'status': 'Invaid URL', 'data': ''}
 
