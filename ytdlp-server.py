@@ -107,7 +107,6 @@ class YTDLP():
     super(YTDLP, self).__init__()
     self.download_dir = opts['download_dir']
     self.opts = opts['ydl']
-    self.outtmpl = self.opts['outtmpl'].copy()
     self.opts['logger'] = self.Logger()
     self.opts['paths'] = {'home':self.download_dir}
     self.download_list = {}
@@ -139,12 +138,9 @@ class YTDLP():
       self.opts['cookiefile'] = "cookies/qqvideo.txt"
     opts = self.opts.copy()
     if info['type'] == 'video':
-      opts['paths'] = {'home':self.download_dir}
+      opts['paths'] = {'home':self.download_dir.rstrip('/') + '/' + info['uploader']}
     else:
-      opts['paths'] = {'home':self.download_dir + info['title']}
-    if 'uploader' in info:
-      opts['outtmpl']['default'] = "[" + info['uploader'] + "] " + self.outtmpl['default']
-      opts['outtmpl']['chapter'] = "[" + info['uploader'] + "] " + self.outtmpl['chapter']
+      opts['paths'] = {'home':self.download_dir.rstrip('/') + '/' + info['uploader'] + '/' + info['title']}
     # port = find_available_port()
     # if port:
     #   md5 = sum_md5(url)
@@ -181,6 +177,8 @@ class YTDLP():
       if 'entries' in extract_info:
         info['type'] = 'playlist'
         info['title'] = extract_info.get('title')
+        info['url'] = extract_info.get('webpage_url')
+        info['uploader'] = extract_info.get('entries')[0].get('uploader')
         info['count'] = len(extract_info.get('entries'))
         info['entires'] = []
         for i in range(info['count']):
@@ -200,14 +198,14 @@ class YTDLP():
       else:
         info['type'] = 'video'
         info['title'] = extract_info.get('title')
+        info['url'] = extract_info.get('webpage_url')
+        info['uploader'] = extract_info.get('uploader')
         info['site'] = extract_info.get('extractor')
         info['thumbnail'] = extract_info.get('thumbnail')
-        info['uploader'] = extract_info.get('uploader')
         info['id'] = extract_info.get('display_id')
         info['duration'] = extract_info.get('duration')
         info['resolution'] = extract_info.get('resolution')
         info['ext'] = extract_info.get('ext')
-        info['url'] = extract_info.get('webpage_url')
         info['size'] = extract_info.get('filesize_approx')
       if mode == 'essential':
         return {'status': 'Success', 'data': info}
@@ -223,8 +221,10 @@ class YTDLP():
       url = info['url']
     elif 'webpage_url' in info:
       url = info['webpage_url']
-    if url[-1] == '/':
-      url = url[:-1]
+    else:
+      return {'status': 'Invaid URL', 'data': ''}
+    url = url.rstrip('/')
+    info['url'] = url
     if url in self.download_list:
       return self.task_status()
     else:
@@ -327,5 +327,5 @@ def find_available_port(interface=''):
 if __name__ == '__main__':
   config = import_json(OPT_FILE)
   MyYTDLP = YTDLP(config)
-  print('yt_dlp api server start!')
+  print('yt_dlp server start!')
   app.run(config['host'], config['port'])

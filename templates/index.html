@@ -11,7 +11,7 @@
           width: 90%;
         }
         .video-head {
-          min-width: unset !important;
+          margin: 0 auto;
           max-width: 50% !important;
         }
         .video-card, .video-child-card {
@@ -112,11 +112,11 @@
         width: fit-content;
         border: none;
         margin: 0 auto;
-        max-height: 100vh;
         overflow-y: auto;
         flex-direction: column;
       }
       .list:has(.card:nth-child(2)) {
+        max-height: 100vh;
         border: 2px solid black;
         border-radius: 0.5rem;
       }
@@ -158,7 +158,6 @@
       .video-head {
         display: flex;
         max-width: 10rem;
-        margin: 0 auto;
         flex-direction: column;
         justify-content: center;
         align-items: center;
@@ -216,6 +215,7 @@
     let offline = false;
     let downloading_count = 0;
     let queryTimeout = null;
+    let oldStatus = null;
 
     let url_input = document.getElementById("url_input");
     url_input.addEventListener("keydown", (e)=>{
@@ -381,7 +381,7 @@
         isOpen = 'open';
       }
       div = `
-        <div class="video-playlist-card">
+        <div class="card video-playlist-card">
           <div>
             <a href="`+data.url+`">`+data.title+`</a>
             <p>集数: `+data.count+` | 总大小: `+formatSize(totalSize)+` | 总时长: `+formatSeconds(totalDuration)+`</p>
@@ -448,17 +448,20 @@
     function query_download(status=false){
       clearTimeout(queryTimeout);
       get(statusUrl, (de)=>{
-        if (de == null) {
+        if (de == null){
           queryTimeout = setTimeout(query_download, 3000);
           return;
         }
-        show_video_card(de.data, ".video-downloading-list");
-        if (de.data.task == null){
+        if (de.data == null){
           queryTimeout = setTimeout(query_download, 3000);
         } else {
           queryTimeout = setTimeout(query_download, 1000);
         }
         downloading_list = document.querySelector(".video-downloading-list");
+        if (oldStatus != de.data){
+          show_video_card(de.data, ".video-downloading-list");
+          oldStatus = de.data;
+        }
         if (downloading_count != downloading_list.children.length){
           downloading_count = downloading_list.children.length;
           document.querySelector(".search-notify").innerHTML = "<p>" + de.status + "</p>";
