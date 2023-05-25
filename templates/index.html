@@ -1,0 +1,432 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer">
+    <title>Youtube Download Plus</title>
+    <link rel="shortcut icon" href="static/favicon.png"/>
+    <style>
+      @media (max-width: 600px) {
+        input {
+          width: 90%;
+        }
+        .thumbnail {
+          flex-direction: row !important;
+          margin: 0 auto !important;
+          min-width: unset !important;
+        }
+        .video-card, .video-child-card {
+          flex-direction: column !important;
+        }
+        .video-details {
+          margin-left: unset !important;
+        }
+      }
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-track
+      {
+        width: 6px;
+        border-radius:10px;
+        margin: 6px;
+      }
+      ::-webkit-scrollbar-thumb {
+        width: 6px;
+        border-radius: 10px;
+        border: 3px solid transparent;
+        box-shadow: inset 0 0 6px gray;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        box-shadow: inset 0 0 10px gray;
+      }
+      html, body {
+        width: 100%;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+      }
+      a {
+        text-decoration: none;
+        cursor: pointer;
+      }
+      summary {
+        padding: 0.2rem 1.5rem;
+        text-align: start;
+      }
+      details:has(div:empty) {
+        display: none;
+      }
+      #url_input {
+        font-size: larger;
+        min-width: 60%;
+        border: 2px solid black;
+        border-radius: 0.5rem;
+        padding: 0.2rem 0.5rem;
+      }
+      .center{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+      .container {
+        width: 100%;
+        max-width: 1200px;
+        text-align: center;
+      }
+      .btn-group {
+        margin: 0.4rem;
+      }
+      .btn {
+        display: inline-block;
+        width: auto;
+        text-align: center;
+        padding: 0.2rem 0.5rem;
+        margin: 0.2rem;
+        border: 2px solid black;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        color: black;
+        transform-origin: 50% 50%;
+        transition: all 0.2s ease;
+      }
+      .btn:hover {
+        cursor: pointer;
+      }
+      .btn:active {
+        transform: scale(0.9);
+      }
+      .list {
+        display: block;
+        width: fit-content;
+        border: none;
+        margin: 0 auto;
+        max-height: 100vh;
+        overflow-y: auto;
+        flex-direction: column;
+      }
+      .list:has(.card:nth-child(2)) {
+        border: 2px solid black;
+        border-radius: 0.5rem;
+      }
+      .video-card {
+        position: relative;
+        display: flex;
+        width: 80vw;
+        max-width: 1000px;
+        margin: 0.5rem;
+        padding: 0.5rem;
+        border: 2px solid black;
+        border-radius: 0.5rem;
+        flex-direction: row;
+        text-align: start;
+      }
+      .video-playlist-card {
+        position: relative;
+        display: flex;
+        width: 80vw;
+        max-width: 1000px;
+        margin: 0.5rem;
+        padding: 0.5rem;
+        border: 2px solid black;
+        border-radius: 0.5rem;
+        flex-direction: column;
+      }
+      .video-child-card {
+        position: relative;
+        display: flex;
+        margin-top: 0.5rem;
+        padding: 0.2rem;
+        border-top: 2px solid black;
+        text-align: start;
+      }
+      
+      .thumbnail {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 10rem;
+        min-width: 10rem;
+        max-width: 100%;
+        margin: 0;
+      }
+      .thumbnail img {
+        display: inline-block;
+        width: 100%;
+        margin: 0.5rem;
+        border-radius: 1rem;
+        object-fit: scale-down;
+      }
+      .video-details {
+        margin-left: 2rem;
+      }
+    </style>
+  </head>
+  <body class="center">
+    <div class="container">
+      <h1><a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a></h1>
+      <div>
+        <input type="text" id="url_input" placeholder="粘贴URL并回车直接下载">
+      </div>
+      <div class="btn-group">
+        <input class="btn" type="button" onclick="video_query(this)" value="查询详情">
+        <input class="btn" type="button" onclick="video_add(this)" value="添加下载">
+      </div>
+      <div class="search-notify"></div>
+      <details open>
+        <summary>视频详情 <a href="javascript:;" onclick="video_query_clear()">清空</a></summary>
+        <div class="list center video-info-list"></div>
+      </details>
+      <details open>
+        <summary>下载列表 <a href="javascript:;" onclick="video_download_clear()">清空</a></summary>
+        <div class="list center video-downloading-list"></div>
+      </details>
+      <details>
+        <summary>历史记录 <a href="javascript:;" onclick="video_history_clear()">清空</a></summary>
+        <div class="list center video-history-list"></div>
+      </details>
+    </div>
+  </body>
+  <script>
+    // let host = "http://10.0.0.2:8848/" 
+    host = ""
+    let infoUrl = host + "info?url=";
+    let downloadUrl = host + "download?url=";
+    let clearDownloadUrl = host + "clear_download";
+    let clearHistoryUrl = host + "clear_history";
+    let statusUrl = host + "status";
+    let historyUrl = host + "history";
+
+    let url_input = document.getElementById("url_input");
+    url_input.addEventListener("keydown", (e)=>{
+      if (e.keyCode == "13") {
+        let url = url_input.value;
+        get(downloadUrl + url,(e)=>{
+          query_download();
+        });
+      }
+    })
+
+    let downloading_count = 0;
+    function get(url, callback, user=true){
+      let ajax = new XMLHttpRequest();
+      ajax.open("GET", url, true);
+      ajax.send();
+      ajax.onreadystatechange=()=>{
+        if (ajax.readyState == 4){
+          data = {};
+          if (ajax.status==200){
+            data = JSON.parse(ajax.responseText);
+            if (typeof callback === 'function') {
+              data = JSON.parse(ajax.responseText);
+              let div = "<p>" + data.status + "</p>"
+              if (user) {
+                document.querySelector(".search-notify").innerHTML = div;
+              }
+              callback(data);
+            }
+          } else if(ajax.status == 0 || ajax.status == 404 || ajax.status == 502) {
+            document.querySelector(".search-notify").innerHTML = "无法连接至yt-dlp！";
+            callback(null);
+          } else if(ajax.status == 500) {
+            document.querySelector(".search-notify").innerHTML = "内部错误！不支持此URL！";
+            callback(null);
+          } else if (ajax.status != 200) {
+            data = JSON.parse(ajax.responseText);
+            let div = "<p>" + data.status + "</p>"
+            if (user) {
+              document.querySelector(".search-notify").innerHTML = div;
+            }
+            callback(data);
+          }
+        }
+      }
+    }
+    function formatSize(value) {
+      if (null == value || value == "") {
+          return "0 Bytes";
+      }
+      let unitArray = new Array("B","KB","MB","GB","TB","PB","EB","ZB","YB");
+      let index = 0;
+      let srcSize = parseFloat(value * 1.1);
+      index = Math.floor(Math.log(srcSize) / Math.log(1024));
+      let size = srcSize/Math.pow(1024, index);
+      size = size.toFixed(2);
+      return size + unitArray[index];
+    }
+    function formatSeconds(value) {
+      let hours = Math.floor(value / 3600);
+      let minutes = Math.floor((value - (hours * 3600)) / 60);
+      let seconds = Math.floor(value - (hours * 3600) - (minutes * 60));
+      if (minutes < 10 && hours != 0) {
+        minutes = "0" + minutes;
+      }
+      if (seconds < 10 && minutes != 0) {
+        seconds = "0" + seconds;
+      }
+      let timeString = hours + ':' + minutes + ':' + seconds;
+      if (hours == 0 && minutes == 0) {
+        timeString = seconds;
+      } else if (hours == 0) {
+        timeString = minutes + ':' + seconds;
+      }
+      return timeString;
+    }
+
+    function createDiv(data){
+      div = ""
+      if (data.type == 'video') {
+        div = createVideoDiv(data)
+      } else {
+        div = createPlaylistDiv(data)
+      }
+      return div
+    }
+    function createVideoDiv(data){
+      div = `
+        <div class="card video-card">
+          <div class="thumbnail">
+            <img src="`+data.thumbnail+`">
+          </div>
+          <div class="video-details">
+            <a href="`+data.url+`">`+data.title+`</a>
+            <p>分辨率: `+data.resolution+`</p>
+            <p>预估大小: `+formatSize(data.size)+`</p>
+            <p>播放时长: `+formatSeconds(data.duration)+`</p>
+            <p>视频格式: `+data.ext+`</p>
+            <p>来源: `+data.site+' '+data.uploader+`</p>
+          </div>
+        </div>
+      ` 
+      return div
+    }
+    function createPlaylistDiv(data){
+      totalSize = 0;
+      totalDuration = 0;
+      childDiv = "";
+      let d = data.entires;
+      for (let i in d) {
+        totalSize += d[i].size;
+        totalDuration += d[i].duration;
+        childDiv += `
+          <div class="video-child-card">
+            <div class="thumbnail">
+              <img src="`+d[i].thumbnail+`">
+            </div>
+            <div class="video-details">
+              <a href="`+d[i].url+`">`+d[i].title+`</a>
+              <p>分辨率: `+d[i].resolution+`</p>
+              <p>预估大小: `+formatSize(d[i].size)+`</p>
+              <p>视频时长: `+formatSeconds(d[i].duration)+`</p>
+              <p>视频格式: `+d[i].ext+`</p>
+              <p>来源: `+d[i].site+' '+d[i].uploader+`</p>
+            </div>
+          </div>
+        `
+      }
+      let isOpen = '';
+      if (d.length <= 3) {
+        isOpen = 'open';
+      }
+      div = `
+        <div class="video-playlist-card">
+          <div>
+            <a href="`+data.url+`">`+data.title+`</a>
+            <p>集数: `+data.count+`</p>
+            <p>总大小: `+formatSize(totalSize)+`</p>
+            <p>总时长: `+formatSeconds(totalDuration)+`</p>
+            <details `+isOpen+`>
+              <summary>合辑详情</summary>
+              <div>`+childDiv+`</div>
+            </details>
+          </div>
+        </div>
+      ` 
+      return div
+    }
+    
+    function show_video_info(data){
+      if (data != ""){
+        document.querySelector(".video-info-list").insertAdjacentHTML("AfterBegin", createDiv(data));
+      } else {
+        let div = "<p>不支持此URL!</p>"
+        document.querySelector(".search-notify").innerHTML = div;
+      }
+    }
+    function show_video_card(data, element){
+      document.querySelector(element).innerHTML = "";
+      if (data != ""){
+        for(let key in data) {
+          document.querySelector(element).insertAdjacentHTML("AfterBegin", createDiv(data[key]));
+        }
+      }
+    }
+
+    function video_query(obj){
+      document.querySelector(".search-notify").innerHTML = "正在获取视频详情...";
+      let url = document.getElementById("url_input").value;
+      get(infoUrl + url,(e)=>{
+        show_video_info(e.data);
+      });
+    }
+    function video_add(obj){
+      document.querySelector(".search-notify").innerHTML = "正在添加至下载列表...";
+      let url = document.getElementById("url_input").value;
+      get(downloadUrl + url,(e)=>{
+        query_download();
+      });
+    }
+
+    function query_history(){
+      get(historyUrl, (he)=>{
+        show_video_card(he.data, ".video-history-list");
+      }, false);
+    }
+    function query_download(){
+      get(statusUrl, (de)=>{
+        if (de == null) {
+          setTimeout(query_download, 3000);
+          return;
+        }
+        show_video_card(de.data, ".video-downloading-list");
+        if (de.data.task == null){
+          setTimeout(query_download, 3000);
+        } else {
+          setTimeout(query_download, 1000);
+        }
+        downloading_list = document.querySelector(".video-downloading-list");
+        if (downloading_count != downloading_list.children.length){
+          downloading_count = downloading_list.children.length;
+          document.querySelector(".search-notify").innerHTML = "<p>" + de.status + "</p>";
+          query_history();
+        }
+      }, false);
+    }
+    query_history();
+    query_download();
+
+    function video_query_clear(){
+      document.querySelector(".video-info-list").innerHTML = "";
+    }
+    function video_download_clear(){
+      let flag = confirm("该操作会清空下载列表(由于ytdlp限制无法停止正在下载，只是清空记录)，是否继续？");
+      if (flag) {
+        let url = document.getElementById("url_input").value;
+        get(clearHistoryUrl);
+        query_history();
+      }
+    }
+    function video_history_clear(){
+      let flag = confirm("该操作会清空下载历史记录，是否继续？");
+      if (flag) {
+        let url = document.getElementById("url_input").value;
+        get(clearHistoryUrl);
+        query_history();
+      }
+    }
+
+  </script>
+</html>

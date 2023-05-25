@@ -1,0 +1,4 @@
+Flask==2.2.2
+yt-dlp==2023.1.6
+flask_cors==3.0.10
+requests==2.25.1
