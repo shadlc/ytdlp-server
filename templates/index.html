@@ -274,7 +274,7 @@
               document.querySelector(".search-notify").innerHTML = div;
             }
             if (typeof callback === 'function') {
-              callback(null);
+              callback(data);
             }
           }
         }
@@ -399,9 +399,6 @@
     function show_video_info(data){
       if (data != ""){
         document.querySelector(".video-info-list").insertAdjacentHTML("AfterBegin", createDiv(data));
-      } else {
-        let div = "<p>不支持此URL!</p>"
-        document.querySelector(".search-notify").innerHTML = div;
       }
     }
     function show_video_card(data, element){

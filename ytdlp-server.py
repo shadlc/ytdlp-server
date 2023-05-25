@@ -75,7 +75,7 @@ def history():
   if task_list := MyYTDLP.task_history():
     return restful(200, 'Success', task_list)
   else:
-    return restful(400, 'No history yet')
+    return restful(200, 'No history yet')
 
 @app.route('/clear_download')
 def clear_download():
