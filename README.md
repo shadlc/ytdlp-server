@@ -49,7 +49,7 @@ Directly download the video via yt-dlp.
 #### example
 * ##### request
 ` GET http://127.0.0.1:8848/download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ `
-* ##### responed
+* ##### response
 ```
 {
   "code": 200,
@@ -75,7 +75,7 @@ Get video information via yt-dlp.
 #### example
 * ##### request
 ` GET http://127.0.0.1:8848/info?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ `
-* ##### responed
+* ##### response
 ```
 {
   "code": 200,
@@ -102,7 +102,7 @@ Get the status about download task.
 #### example
 * ##### request
 ` GET http://127.0.0.1:8848/status `
-* ##### responed
+* ##### response
 ```
 {
   "code": 200,
@@ -120,7 +120,7 @@ Get the history you downloaded.
 #### example
 * ##### request
 ` GET http://127.0.0.1:8848/history `
-* ##### responed
+* ##### response
 ```
 {
   "code": 400,
@@ -136,7 +136,7 @@ Clear the downloading list.
 #### example
 * ##### request
 ` GET http://127.0.0.1:8848/clear_download `
-* ##### responed
+* ##### response
 ```
 {
   "code": 400,
@@ -152,7 +152,7 @@ Clear the download history.
 #### example
 * ##### request
 ` GET http://127.0.0.1:8848/clear_history `
-* ##### responed
+* ##### response
 ```
 {
   "code": 400,
