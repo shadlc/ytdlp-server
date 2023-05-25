@@ -3,12 +3,16 @@
 ## Introduction
 YT-DLP Server is an server side for [yt-dlp](https://github.com/yt-dlp/yt-dlp/) that can allow you run it in your server.
 
+## Notice
+- Server side is English but the webpage is in all chinese, you can translate it.
+- No download speed or duration for display.
+
 ## Features
-1. Depend on Flask.
-2. Easy use API, RESTful-API style respond.
-3. Multi-threaded download task.
-4. Download with aria2, each tasks RPC host support.
-5. User-friendly interactive and interface.
+- Depend on Flask.
+- Easy use API, RESTful-API style respond.
+- Multi-threaded download task.
+- User-friendly interactive and interface.
+- Server with single python file, webpage with single HTML file, easy for learning.
 
 ## Use
 ### Install Aria2
@@ -34,7 +38,7 @@ You need to install aria2 first because this script depends on aria2 for more qu
 ### Run
     $ python3 ytdlp-server.py
 
-#### Usage Notes
+### Usage Notes
 When started this script, you can download videos to server via yt-dlp. You can modify the configuration file "config.json". 
 
 ## Web Page
