@@ -163,4 +163,4 @@ Clear the download history.
 
 
 ## License
-[![License](https://img.shields.io/github/license/shadlc/ytdlp-server.svg?style=flat)](https://github.com/shadlc/ytdlp-server/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/shadlc/ytdlp-server.svg?style=flat)](https://github.com/shadlc/ytdlp-server/blob/main/LICENSE)
