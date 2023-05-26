@@ -52,11 +52,16 @@ Directly download the video via yt-dlp.
 - url: The url that input for yt-dlp.
 #### example
 * ##### request
-` GET http://127.0.0.1:8848/download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ `
-` POST http://127.0.0.1:8848/download `
+  ` GET http://127.0.0.1:8848/download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ `
+  
+  ` POST http://127.0.0.1:8848/download `
 * #### post params
-- cookies: Base64 encode Netscape format cookies file.
-- url: The url that input for yt-dlp.
+  ` cookies: Base64 encode Netscape format cookies file. `
+  
+  ` url: The url that input for yt-dlp. `
+  
+  ` mode: Default is "brief" and optional in "brief" or "raw". `
+  
 * ##### response
 ```
 {
@@ -83,12 +88,16 @@ Get video information via yt-dlp.
 - mode: Default is "brief" and optional in "brief" or "raw".
 #### example
 * ##### request
-` GET http://127.0.0.1:8848/info?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ `
-` POST http://127.0.0.1:8848/info `
+  ` GET http://127.0.0.1:8848/info?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ `
+  
+  ` POST http://127.0.0.1:8848/info `
 * #### post params
-- cookies: Base64 encode Netscape format cookies file.
-- url: The url that input for yt-dlp.
-- mode: Default is "brief" and optional in "brief" or "raw".
+  ` cookies: Base64 encode Netscape format cookies file. `
+  
+  ` url: The url that input for yt-dlp. `
+  
+  ` mode: Default is "brief" and optional in "brief" or "raw". `
+  
 * ##### response
 ```
 {
@@ -155,7 +164,7 @@ Clear the downloading list.
 ```
 {
   "code": 400,
-  "status": "cleared",
+  "status": "Cleared",
   "data": ""
 }
 ```
@@ -171,7 +180,7 @@ Clear the download history.
 ```
 {
   "code": 400,
-  "status": "cleared",
+  "status": "Cleared",
   "data": ""
 }
 ```
