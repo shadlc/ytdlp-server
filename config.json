@@ -2,6 +2,7 @@
 	"host": "0.0.0.0",
 	"port": "8848",
 	"download_dir": "/mnt/sda/ytdlp/",
+	"log_dir": "",
 	"ydl":{
 	    "outtmpl": {
 	    	"default": "%(title)s [%(extractor)s %(id)s]",
@@ -16,5 +17,11 @@
 		],
 		"extractor_args": "youtubetab:skip=authcheck youtube:player-client=web",
 		"ratelimit": "30000000"
+	},
+	"cookies": {
+		"user_custom": "custom.txt",
+		"youtube": "youtube.txt",
+		"bilibili": "bilibili.txt",
+		"v.qq": "qqvideo.txt"
 	}
 }

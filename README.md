@@ -53,6 +53,10 @@ Directly download the video via yt-dlp.
 #### example
 * ##### request
 ` GET http://127.0.0.1:8848/download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ `
+` POST http://127.0.0.1:8848/download `
+* #### post params
+- cookies: Base64 encode Netscape format cookies file.
+- url: The url that input for yt-dlp.
 * ##### response
 ```
 {
@@ -67,7 +71,8 @@ Directly download the video via yt-dlp.
     "duration": 212,
     "resolution": "1920x1080",
     "ext": "webm",
-    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "cookies": 'youtube'
   }
 }
 ```
@@ -75,10 +80,15 @@ Directly download the video via yt-dlp.
 Get video information via yt-dlp.
 #### params
 - url: The url that input for yt-dlp.
-- type: Default is "brief" and optional in "brief" or "raw".
+- mode: Default is "brief" and optional in "brief" or "raw".
 #### example
 * ##### request
 ` GET http://127.0.0.1:8848/info?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ `
+` POST http://127.0.0.1:8848/info `
+* #### post params
+- cookies: Base64 encode Netscape format cookies file.
+- url: The url that input for yt-dlp.
+- mode: Default is "brief" and optional in "brief" or "raw".
 * ##### response
 ```
 {
@@ -94,7 +104,8 @@ Get video information via yt-dlp.
     "resolution": "1920x1080",
     "ext": "webm",
     "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "size": 59080956
+    "size": 59080956,
+    "cookies": 'youtube'
   }
 }
 ```

@@ -3,12 +3,14 @@ import time
 import json
 import copy
 import flask
+import base64
 import socket
 import hashlib
 import requests
 import threading
+from http.cookiejar import LoadError
 from flask_cors import CORS
-from yt_dlp import YoutubeDL
+from yt_dlp import YoutubeDL, DownloadError
 
 GREEN = '\033[0;32m'
 YELLOW = '\033[0;33m'
@@ -17,29 +19,12 @@ app = flask.Flask(__name__)
 CORS(app, resources=r'/*')
 MyYTDLP = None
 
-OPT_FILE = 'config.json'
+CONFIG_FILE = 'config.json'
 LOG_FILE = 'latest.log'
 
 @app.route('/')
 def index():
   return flask.render_template('index.html')
-
-@app.route('/download')
-def download():
-  global MyYTDLP
-  if flask.request.method == 'POST':
-    url = request.form['url']
-  else:
-    result = flask.request.args
-    url = result['url'] if 'url' in result else ''
-  if url == '':
-    return restful(400, 'No URL input')
-  else:
-    result = MyYTDLP.start(url)
-    if 'Added' == result['status']:
-      return restful(202, result['status'], result['data'])
-    else:
-      return restful(200, result['status'], result['data'])
 
 @app.route('/status')
 def status():
@@ -47,26 +32,47 @@ def status():
   result = MyYTDLP.task_status()
   return restful(200, result['status'], result['data'])
 
-@app.route('/info')
-def info():
+@app.route('/download', methods=['GET','POST'])
+def download():
   global MyYTDLP
   if flask.request.method == 'POST':
-    url = request.form['url']
+    data = json.loads(flask.request.get_data().decode("utf-8"))
+    url = data['url']
+    cookies = data['cookies']
   else:
     result = flask.request.args
     url = result['url'] if 'url' in result else ''
-    mode = result['mode'] if 'mode' in result else ''
+    cookies = ''
   if url == '':
     return restful(400, 'No URL input')
   else:
-    if mode == 'essential':
-      result = MyYTDLP.info(url)
+    result = MyYTDLP.start(url, cookies)
+    if 'Added' == result['status']:
+      return restful(202, result['status'], result['data'])
+    else:
       return restful(200, result['status'], result['data'])
-    elif mode == 'raw':
-      result = MyYTDLP.info(url,'raw')
+
+@app.route('/info', methods=['GET','POST'])
+def info():
+  global MyYTDLP
+  if flask.request.method == 'POST':
+    result = json.loads(flask.request.get_data().decode("utf-8"))
+    cookies = result.get('cookies')
+    mode = result.get('mode')
+    url = result.get('url')
+  else:
+    result = flask.request.args
+    cookies = result.get('cookies')
+    mode = result.get('mode')
+    url = result.get('url')
+  if url == '':
+    return restful(400, 'No URL input')
+  else:
+    if mode == 'raw':
+      result = MyYTDLP.info(url,'raw', cookies)
       return restful(200, result['status'], result['data'])
     else:
-      result = MyYTDLP.info(url)
+      result = MyYTDLP.info(url,'brief', cookies)
       return restful(200, result['status'], result['data'])
 
 @app.route('/history')
@@ -107,13 +113,32 @@ class YTDLP():
     super(YTDLP, self).__init__()
     self.download_dir = opts['download_dir']
     self.opts = opts['ydl']
-    self.opts['logger'] = self.Logger()
     self.opts['paths'] = {'home':self.download_dir}
+    self.opts['logger'] = self.Logger(opts['log_dir'] + LOG_FILE)
+    self.cookies = opts['cookies']
+    self.cookies_used = None
     self.download_list = {}
     self.download_history = {}
     self.rpc_list = {}
     self.error_code = 0
     self.status = 'Init'
+
+  def check_cookies(self, url, cookies):
+    if cookies:
+      self.opts['cookiefile'] = self.cookies.get('user_custom','cookies/custom.txt')
+      open(self.opts['cookiefile'], mode='w').write(base64.b64decode(cookies).decode('utf-8'))
+      self.cookies_used = ''
+      return
+    else:
+      self.opts['cookiefile'] = 'Null'
+      self.cookies_used = None
+
+    for keyword in self.cookies:
+      file = self.cookies[keyword]
+      if keyword in url and os.path.exists(f"cookies/{file}"):
+        self.opts['cookiefile'] = f"cookies/{file}"
+        self.cookies_used = keyword
+
 
   def download_thread(self, url, info):
     '''download thread'''
@@ -130,17 +155,11 @@ class YTDLP():
 
   def download(self, url, info):
     '''yt_dlp download method'''
-    if 'bilibili' in url and os.path.exists("cookies/bilibili.txt"):
-      self.opts['cookiefile'] = "cookies/bilibili.txt"
-    elif 'youtube' in url and os.path.exists("cookies/youtube.txt"):
-      self.opts['cookiefile'] = "cookies/youtube.txt"
-    elif 'qq' in url and os.path.exists("cookies/qqvideo.txt"):
-      self.opts['cookiefile'] = "cookies/qqvideo.txt"
     opts = self.opts.copy()
     if info['type'] == 'video':
-      opts['paths'] = {'home':self.download_dir.rstrip('/') + '/' + info['uploader']}
+      opts['paths'] = {'home':self.download_dir.rstrip('/')}
     else:
-      opts['paths'] = {'home':self.download_dir.rstrip('/') + '/' + info['uploader'] + '/' + info['title']}
+      opts['paths'] = {'home':self.download_dir.rstrip('/') + '/' + info['title']}
     # port = find_available_port()
     # if port:
     #   md5 = sum_md5(url)
@@ -161,80 +180,84 @@ class YTDLP():
     print(f'\n{GREEN}Success download for {url}{ENDC}')
     return error_code
 
-  def info(self, url, mode='essential'):
+  def info(self, url, mode='brief', cookies=''):
     '''get informations from url'''
     try:
-      if 'bilibili' in url and os.path.exists("cookies/bilibili.txt"):
-        self.opts['cookiefile'] = "cookies/bilibili.txt"
-      elif 'youtube' in url and os.path.exists("cookies/youtube.txt"):
-        self.opts['cookiefile'] = "cookies/youtube.txt"
-      elif 'qq' in url and os.path.exists("cookies/qqvideo.txt"):
-        self.opts['cookiefile'] = "cookies/qqvideo.txt"
+      self.check_cookies(url, cookies)
       extract_info = YoutubeDL(self.opts).extract_info(url, download=False)
       if mode == 'raw':
         return {'status': 'Success', 'data': extract_info}
       info = {}
       if 'entries' in extract_info:
         info['type'] = 'playlist'
-        info['title'] = extract_info.get('title')
-        info['url'] = extract_info.get('webpage_url')
-        info['uploader'] = extract_info.get('entries')[0].get('uploader')
+        info['title'] = extract_info.get('title', 'unknown')
+        info['url'] = extract_info.get('webpage_url', '')
+        info['uploader'] = extract_info.get('entries')[0].get('uploader', '')
         info['count'] = len(extract_info.get('entries'))
         info['entires'] = []
+        info['cookies'] = self.cookies_used
         for i in range(info['count']):
           entries = extract_info.get('entries')
           item = {}
-          item['title'] = entries[i].get('title')
-          item['site'] = entries[i].get('extractor')
-          item['thumbnail'] = entries[i].get('thumbnail')
-          item['uploader'] = entries[i].get('uploader')
-          item['id'] = entries[i].get('display_id')
-          item['duration'] = entries[i].get('duration')
-          item['resolution'] = entries[i].get('resolution')
-          item['ext'] = entries[i].get('ext')
-          item['url'] = entries[i].get('webpage_url')
-          item['size'] = entries[i].get('filesize_approx')
+          item['title'] = entries[i].get('title', 'unknown')
+          item['url'] = entries[i].get('webpage_url', '')
+          item['uploader'] = entries[i].get('uploader', '')
+          item['site'] = entries[i].get('extractor', 'unknown')
+          item['thumbnail'] = entries[i].get('thumbnail', '')
+          item['id'] = entries[i].get('display_id', '')
+          item['duration'] = entries[i].get('duration', '')
+          item['resolution'] = entries[i].get('resolution', '')
+          item['ext'] = entries[i].get('ext', 'unknown')
+          item['size'] = entries[i].get('filesize_approx', '')
           info['entires'].append(item)
       else:
         info['type'] = 'video'
-        info['title'] = extract_info.get('title')
-        info['url'] = extract_info.get('webpage_url')
-        info['uploader'] = extract_info.get('uploader')
-        info['site'] = extract_info.get('extractor')
-        info['thumbnail'] = extract_info.get('thumbnail')
-        info['id'] = extract_info.get('display_id')
-        info['duration'] = extract_info.get('duration')
-        info['resolution'] = extract_info.get('resolution')
-        info['ext'] = extract_info.get('ext')
-        info['size'] = extract_info.get('filesize_approx')
-      if mode == 'essential':
+        info['title'] = extract_info.get('title', 'unknown')
+        info['url'] = extract_info.get('webpage_url', '')
+        info['uploader'] = extract_info.get('uploader', '')
+        info['site'] = extract_info.get('extractor', 'unknown')
+        info['thumbnail'] = extract_info.get('thumbnail', '')
+        info['id'] = extract_info.get('display_id', '')
+        info['duration'] = extract_info.get('duration', '')
+        info['resolution'] = extract_info.get('resolution', '')
+        info['ext'] = extract_info.get('ext', 'unknown')
+        info['size'] = extract_info.get('filesize_approx', '')
+        info['cookies'] = self.cookies_used
+      if mode == 'brief':
         return {'status': 'Success', 'data': info}
       else:
         return {'status': 'Success', 'data': info}
-    except:
+    except DownloadError:
       return {'status': 'Invaid URL', 'data': ''}
+    except LoadError:
+      return {'status': 'Load Cookies failed. See more <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
+    except Exception as e:
+      return {'status': f'{e}', 'data': ''}
 
-  def start(self, url):
+  def start(self, url, cookies=''):
     '''detect url and start download'''
-    info = self.info(url)['data']
-    if 'url' in info:
-      url = info['url']
-    elif 'webpage_url' in info:
-      url = info['webpage_url']
-    else:
-      return {'status': 'Invaid URL', 'data': ''}
-    url = url.rstrip('/')
-    info['url'] = url
-    if url in self.download_list:
-      return self.task_status()
-    else:
-      threading.Thread(target=self.download_thread, args=(url, info), daemon=True).start()
-      self.status = 'Added'
-      return {'status': self.status, 'data': info}
     try:
-      pass
-    except:
+      info = self.info(url, cookies)['data']
+      if 'url' in info:
+        url = info['url']
+      elif 'webpage_url' in info:
+        url = info['webpage_url']
+      else:
+        return {'status': 'Invaid URL', 'data': ''}
+      url = url.rstrip('/')
+      info['url'] = url
+      if url in self.download_list:
+        return self.task_status()
+      else:
+        threading.Thread(target=self.download_thread, args=(url, info), daemon=True).start()
+        self.status = 'Added'
+        return {'status': self.status, 'data': info}
+    except DownloadError:
       return {'status': 'Invaid URL', 'data': ''}
+    except LoadError:
+      return {'status': 'Load Cookies failed, it\'s does not look like a Netscape format cookies file. See more from <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
+    except Exception as e:
+      return {'status': f'{e}', 'data': ''}
 
   # def count_process(self):
   #   for url in self.rpc_list:
@@ -268,11 +291,8 @@ class YTDLP():
 
   class Logger:
     '''yt_dlp log class'''
-    def __init__(self):
-      if os.path.exists(LOG_FILE):
-        self.log = open(LOG_FILE, mode='a')
-      else:
-        self.log = open(LOG_FILE, mode='w')
+    def __init__(self, log_file):
+      self.log = open(log_file, mode='a+')
 
     def __del__(self):
       self.log.close()
@@ -325,7 +345,7 @@ def find_available_port(interface=''):
     return None
 
 if __name__ == '__main__':
-  config = import_json(OPT_FILE)
+  config = import_json(CONFIG_FILE)
   MyYTDLP = YTDLP(config)
   print('yt_dlp server start!')
   app.run(config['host'], config['port'])
