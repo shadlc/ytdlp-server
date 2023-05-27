@@ -12,7 +12,9 @@ from http.cookiejar import LoadError
 from flask_cors import CORS
 from yt_dlp import YoutubeDL, DownloadError
 
+RED = '\033[0;31m'
 GREEN = '\033[0;32m'
+BLUE = '\033[0;94m'
 YELLOW = '\033[0;33m'
 ENDC = '\033[0m'
 app = flask.Flask(__name__)
@@ -146,39 +148,42 @@ class YTDLP():
     self.error_code = self.download(url, info)
     self.download_list.pop(url)
     self.download_history[url] = info
-    if self.download_list == {}:
-      self.status = 'Listening'
-    elif self.error_code:
+    if self.error_code:
       self.status = f'Error with code: {self.error_code}'
+    elif self.download_list == {}:
+      self.status = 'Listening'
     else:
       self.status = 'Downloading'
 
   def download(self, url, info):
     '''yt_dlp download method'''
-    opts = self.opts.copy()
-    if info['type'] == 'video':
-      opts['paths'] = {'home':self.download_dir.rstrip('/')}
-    else:
-      opts['paths'] = {'home':self.download_dir.rstrip('/') + '/' + info['title']}
-    # port = find_available_port()
-    # if port:
-    #   md5 = sum_md5(url)
-    #   opts['external_downloader_args'].append(f'--gid={md5[:16]}')
-    #   opts['external_downloader_args'].append(f'--rpc-secret={md5[:16]}')
-    #   opts['external_downloader_args'].append(f'--enable-rpc=true')
-    #   opts['external_downloader_args'].append(f'--rpc-listen-all=true')
-    #   opts['external_downloader_args'].append(f'--rpc-allow-origin-all=true')
-    #   print(f'{YELLOW}Start download for [{url}] with aria2c rpc port at localhost:{port} which GID is {md5[:16]}{ENDC}')
-    #   self.rpc_list[url] = {'port': port, 'token': md5[:16]}
-    # else:
-    #   opts['external_downloader_args'].append('--enable-rpc=false')
-    #   print(f'{YELLOW}Start download for [{url}] with aria2c but has No available port！')
-    ydl = YoutubeDL(opts)
-    ydl.add_progress_hook(self.progress_hook)
-    self.status = 'Downloading'
-    error_code = ydl.download(url)
-    print(f'\n{GREEN}Success download for {url}{ENDC}')
-    return error_code
+    try:
+      opts = self.opts.copy()
+      if info['type'] == 'video':
+        opts['paths'] = {'home':self.download_dir.rstrip('/')}
+      else:
+        opts['paths'] = {'home':self.download_dir.rstrip('/') + '/' + info['title']}
+      # port = find_available_port()
+      # if port:
+      #   md5 = sum_md5(url)
+      #   opts['external_downloader_args'].append(f'--gid={md5[:16]}')
+      #   opts['external_downloader_args'].append(f'--rpc-secret={md5[:16]}')
+      #   opts['external_downloader_args'].append(f'--enable-rpc=true')
+      #   opts['external_downloader_args'].append(f'--rpc-listen-all=true')
+      #   opts['external_downloader_args'].append(f'--rpc-allow-origin-all=true')
+      #   print(f'{YELLOW}Start download for [{url}] with aria2c rpc port at localhost:{port} which GID is {md5[:16]}{ENDC}')
+      #   self.rpc_list[url] = {'port': port, 'token': md5[:16]}
+      # else:
+      #   opts['external_downloader_args'].append('--enable-rpc=false')
+      #   print(f'{YELLOW}Start download for [{url}] with aria2c but has No available port！')
+      ydl = YoutubeDL(opts)
+      ydl.add_progress_hook(self.progress_hook)
+      self.status = 'Downloading'
+      error_code = ydl.download(url)
+      print(f'\n{GREEN}Success download for {url}{ENDC}')
+      return error_code
+    except Exception as e:
+      return f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
 
   def info(self, url, mode='brief', cookies=''):
     '''get informations from url'''
@@ -227,12 +232,13 @@ class YTDLP():
         return {'status': 'Success', 'data': info}
       else:
         return {'status': 'Success', 'data': info}
-    except DownloadError:
-      return {'status': 'Invaid URL', 'data': ''}
     except LoadError:
-      return {'status': 'Load Cookies failed. See more <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
+      return {'status': 'Load cookies failed. See more <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
     except Exception as e:
-      return {'status': f'{e}', 'data': ''}
+      status = f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
+      if type(e) == DownloadError:
+        status += '. See more <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">Here</a>'
+      return {'status': status, 'data': ''}
 
   def start(self, url, cookies=''):
     '''detect url and start download'''
@@ -243,7 +249,7 @@ class YTDLP():
       elif 'webpage_url' in info:
         url = info['webpage_url']
       else:
-        return {'status': 'Invaid URL', 'data': ''}
+        url = ''
       url = url.rstrip('/')
       info['url'] = url
       if url in self.download_list:
@@ -252,12 +258,13 @@ class YTDLP():
         threading.Thread(target=self.download_thread, args=(url, info), daemon=True).start()
         self.status = 'Added'
         return {'status': self.status, 'data': info}
-    except DownloadError:
-      return {'status': 'Invaid URL', 'data': ''}
     except LoadError:
-      return {'status': 'Load Cookies failed, it\'s does not look like a Netscape format cookies file. See more from <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
+      return {'status': 'Load Cookies failed. See more from <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
     except Exception as e:
-      return {'status': f'{e}', 'data': ''}
+      status = f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
+      if type(e) == DownloadError:
+        status += '. See more <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">Here</a>'
+      return {'status': status, 'data': ''}
 
   # def count_process(self):
   #   for url in self.rpc_list:
