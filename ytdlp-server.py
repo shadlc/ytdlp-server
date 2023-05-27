@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import json
 import copy
@@ -10,7 +11,8 @@ import requests
 import threading
 from http.cookiejar import LoadError
 from flask_cors import CORS
-from yt_dlp import YoutubeDL, DownloadError
+
+from ytdlp.yt_dlp import YoutubeDL, DownloadError
 
 RED = '\033[0;31m'
 GREEN = '\033[0;32m'
@@ -243,15 +245,14 @@ class YTDLP():
   def start(self, url, cookies=''):
     '''detect url and start download'''
     try:
-      info = self.info(url, cookies)['data']
+      query_info = self.info(url, cookies)
+      info = query_info['data']
       if 'url' in info:
         url = info['url']
-      elif 'webpage_url' in info:
-        url = info['webpage_url']
+        info['url'] = url
       else:
-        url = ''
+        return query_info
       url = url.rstrip('/')
-      info['url'] = url
       if url in self.download_list:
         return self.task_status()
       else:

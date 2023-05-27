@@ -546,9 +546,9 @@
           if (e != null && e.data != null) {
             query_download();
             url_input.value = "";
-          }
-          if (e.data.cookies) {
-            cookies_type.innerHTML = e.data.cookies;
+            if (e.data.cookies) {
+              cookies_type.innerHTML = e.data.cookies;
+            }
           }
           requesting_mode(false);
         });
@@ -557,9 +557,9 @@
           if (e != null && e.data != null) {
             query_download();
             url_input.value = "";
-          }
-          if (e.data.cookies) {
-            cookies_type.innerHTML = e.data.cookies;
+            if (e.data.cookies) {
+              cookies_type.innerHTML = e.data.cookies;
+            }
           }
           requesting_mode(false);
         });
