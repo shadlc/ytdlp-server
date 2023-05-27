@@ -121,8 +121,13 @@
         border-right: 2px solid;
       }
       .file_input span {
+        display: inline-block;
         font-size: small;
         padding-left: 0.1rem;
+        max-width: 6rem;
+        overflow: hidden;
+        vertical-align: middle;
+        text-overflow: ellipsis;
       }
 
       .list {
@@ -460,6 +465,7 @@
         post(infoUrl, JSON.stringify({"url": url, "cookies": custom_cookies}),(e)=>{
           if (e != null && e.data != null) {
             show_video_info(e.data);
+            url_input.value = "";
             if (e.data.cookies) {
               cookies_type.innerHTML = e.data.cookies;
             }
@@ -470,6 +476,7 @@
         get(infoUrl + "?url=" + url,(e)=>{
           if (e != null && e.data != null) {
             show_video_info(e.data);
+            url_input.value = "";
             if (e.data.cookies) {
               cookies_type.innerHTML = e.data.cookies;
             }
@@ -486,7 +493,10 @@
       }
       if (custom_cookies) {
         post(downloadUrl, JSON.stringify({"url": url, "cookies": custom_cookies}),(e)=>{
-          query_download();
+          if (e != null && e.data != null) {
+            query_download();
+            url_input.value = "";
+          }
           if (e.data.cookies) {
             cookies_type.innerHTML = e.data.cookies;
           }
@@ -494,7 +504,10 @@
         });
       } else {
         get(downloadUrl + "?url=" + url,(e)=>{
-          query_download();
+          if (e != null && e.data != null) {
+            query_download();
+            url_input.value = "";
+          }
           if (e.data.cookies) {
             cookies_type.innerHTML = e.data.cookies;
           }
@@ -538,9 +551,9 @@
           queryTimeout = setTimeout(query_download, 1000);
         }
         downloading_list = document.querySelector(".video-downloading-list");
-        if (oldStatus != de.data){
+        if (oldStatus != JSON.stringify(de.data)){
           show_video_card(de.data, ".video-downloading-list");
-          oldStatus = de.data;
+          oldStatus = JSON.stringify(de.data);
         }
         if (downloading_count != downloading_list.children.length){
           downloading_count = downloading_list.children.length;
