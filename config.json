@@ -8,7 +8,7 @@
 	    	"default": "%(title)s [%(extractor)s %(id)s]",
 	    	"chapter": "%(title)s - %(section_number)03d %(section_title)s [%(extractor)s %(id)s]"
 	    },
-		"proxy": "127.0.0.1:7890",
+		"proxy": "",
 		"external_downloader": "aria2c",
 		"external_downloader_args": [
 			"-x16",
