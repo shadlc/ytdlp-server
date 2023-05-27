@@ -30,7 +30,7 @@ You need to install aria2 first because this script depends on aria2 for more qu
 `
     $ source bin/activate
 `
-### Download
+### Clone
     $ git clone https://github.com/shadlc/ytdlp-server.git
     $ cd ytdlp-server
 ### Install Requirements
@@ -43,6 +43,11 @@ When started this script, you can download videos to server via yt-dlp. You can 
 
 ## Web Page
 - http://127.0.0.1:8848/
+
+### Displaying example that translated webpage on Google
+<p align="center">
+  <kbd><img src="static/example.jpg" width="500"></kbd>
+</p>
 
 ## API
 
@@ -59,8 +64,6 @@ Directly download the video via yt-dlp.
   ` cookies: Base64 encode Netscape format cookies file. `
   
   ` url: The url that input for yt-dlp. `
-  
-  ` mode: Default is "brief" and optional in "brief" or "raw". `
   
 * ##### response
 ```
