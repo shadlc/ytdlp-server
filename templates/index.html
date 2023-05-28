@@ -302,12 +302,7 @@
     url_input.addEventListener("keydown", (e)=>{
       if (e.keyCode == "13" && !requesting) {
         const url = url_input.value;
-        requesting_mode(true);
-        document.querySelector(".search-notify").innerHTML = "正在添加至下载列表...";
-        get(downloadUrl + url,(e)=>{
-          query_download();
-          requesting_mode(false);
-        });
+        video_add(url);
       }
     })
 
