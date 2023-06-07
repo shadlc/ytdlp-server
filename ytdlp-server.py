@@ -50,7 +50,7 @@ def download():
   if url == '':
     return restful(400, 'No URL input')
   else:
-    result = MyYTDLP.start(url, cookies)
+    result = MyYTDLP.add(url, cookies)
     if 'Added' == result['status']:
       return restful(202, result['status'], result['data'])
     else:
@@ -90,7 +90,7 @@ def history():
 @app.route('/clear_download')
 def clear_download():
   global MyYTDLP
-  MyYTDLP.download_list = {}
+  MyYTDLP.download_list = []
   MyYTDLP.error_code = 0
   MyYTDLP.status = 'Cleared'
   return restful(200, MyYTDLP.status)
@@ -98,7 +98,7 @@ def clear_download():
 @app.route('/clear_history')
 def clear_history():
   global MyYTDLP
-  MyYTDLP.download_history = {}
+  MyYTDLP.download_history = []
   return restful(200, MyYTDLP.status)
 
 def restful(code=200, status='', data=''):
@@ -121,41 +121,29 @@ class YTDLP():
     self.opts['logger'] = self.Logger(opts['log_dir'] + LOG_FILE)
     self.cookies = opts['cookies']
     self.cookies_used = None
-    self.download_list = {}
-    self.download_history = {}
+    self.download_list = []
+    self.download_history = []
     self.rpc_list = {}
     self.error_code = 0
     self.status = 'Init'
+    threading.Thread(target=self.download_thread, daemon=True).start()
 
-  def check_cookies(self, url, cookies):
-    if cookies:
-      self.opts['cookiefile'] = self.cookies.get('user_custom','cookies/custom.txt')
-      open(self.opts['cookiefile'], mode='w').write(base64.b64decode(cookies).decode('utf-8'))
-      self.cookies_used = ''
-      return
-    else:
-      self.opts['cookiefile'] = 'Null'
-      self.cookies_used = None
-
-    for keyword in self.cookies:
-      file = self.cookies[keyword]
-      if keyword in url and os.path.exists(f"cookies/{file}"):
-        self.opts['cookiefile'] = f"cookies/{file}"
-        self.cookies_used = keyword
-
-
-  def download_thread(self, url, info):
+  def download_thread(self):
     '''download thread'''
-    self.download_list[url] = info
-    self.error_code = self.download(url, info)
-    self.download_list.pop(url)
-    self.download_history[url] = info
-    if self.error_code:
-      self.status = f'Error with code: {self.error_code}'
-    elif self.download_list == {}:
-      self.status = 'Listening'
-    else:
-      self.status = 'Downloading'
+    while(True):
+      if self.download_list != []:
+        url = self.download_list[0].get('url')
+        info = self.download_list[0]
+        self.error_code = self.download(url, info)
+        self.download_list.pop(0)
+        self.download_history.append(info)
+        if self.error_code:
+          self.status = f'Error with code: {self.error_code}'
+        elif self.download_list == []:
+          self.status = 'Listening'
+        else:
+          self.status = 'Downloading'
+      time.sleep(1);
 
   def download(self, url, info):
     '''yt_dlp download method'''
@@ -185,7 +173,24 @@ class YTDLP():
       print(f'\n{GREEN}Success download for {url}{ENDC}')
       return error_code
     except Exception as e:
+      raise e
       return f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
+
+  def check_cookies(self, url, cookies):
+    if cookies:
+      self.opts['cookiefile'] = self.cookies.get('user_custom','cookies/custom.txt')
+      open(self.opts['cookiefile'], mode='w').write(base64.b64decode(cookies).decode('utf-8'))
+      self.cookies_used = ''
+      return
+    else:
+      self.opts['cookiefile'] = 'Null'
+      self.cookies_used = None
+
+    for keyword in self.cookies:
+      file = self.cookies[keyword]
+      if keyword in url and os.path.exists(f"cookies/{file}"):
+        self.opts['cookiefile'] = f"cookies/{file}"
+        self.cookies_used = keyword
 
   def info(self, url, mode='brief', cookies=''):
     '''get informations from url'''
@@ -237,54 +242,40 @@ class YTDLP():
     except LoadError:
       return {'status': 'Load cookies failed. See more <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
     except Exception as e:
+      raise e
       status = f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
       if type(e) == DownloadError:
         status += '. See more <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">Here</a>'
       return {'status': status, 'data': ''}
 
-  def start(self, url, cookies=''):
+  def add(self, url, cookies=''):
     '''detect url and start download'''
     try:
       query_info = self.info(url, cookies)
       info = query_info['data']
-      if 'url' in info:
-        url = info['url']
-        info['url'] = url
-      else:
+      if 'url' not in info:
         return query_info
-      url = url.rstrip('/')
-      if url in self.download_list:
+      info['url'] = info['url'].rstrip('/')
+      if info['url'] in [i.get('url') for i in self.download_list]:
         return self.task_status()
       else:
-        threading.Thread(target=self.download_thread, args=(url, info), daemon=True).start()
+        self.download_list.append(info)
         self.status = 'Added'
         return {'status': self.status, 'data': info}
     except LoadError:
       return {'status': 'Load Cookies failed. See more from <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
     except Exception as e:
+      raise e
       status = f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
       if type(e) == DownloadError:
         status += '. See more <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">Here</a>'
       return {'status': status, 'data': ''}
 
-  # def count_process(self):
-  #   for url in self.rpc_list:
-  #     port = self.rpc_list[url]['port']
-  #     token = self.rpc_list[url]['token']
-  #     response = requests.post(f'http://localhost:{port}/jsonrpc', data = '{"jsonrpc":"2.0","method":"aria2.tellActive","id":1,"params": ["token:' + token + '"]}')
-  #     result = json.loads(response.text)
-  #     if not result['result']:
-  #       continue
-  #     result = result['result'][0]
-  #     self.download_list[url]['size'] = result['totalLength']
-  #     self.download_list[url]['download_speed'] = result['downloadSpeed']
-  #     self.download_list[url]['processed'] = result['completedLength']
-
   def task_status(self):
     '''return running status and downloading list'''
     if self.status == 'Added':
       self.status = 'Downloading'
-    if self.status == 'finished' and self.download_list != {}:
+    if self.status == 'finished' and self.download_list != []:
       self.status = 'Downloading'
     # self.count_process()
     return {'status': self.status, 'data': self.download_list}

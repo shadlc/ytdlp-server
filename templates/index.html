@@ -305,6 +305,9 @@
         video_add(url);
       }
     })
+    url_input.addEventListener("input", (e)=>{
+        requesting_mode(false);
+    })
 
     function isJson(str) {
       try {
@@ -395,9 +398,9 @@
       return size + unitArray[index];
     }
     function formatSeconds(value) {
-      const hours = Math.floor(value / 3600);
-      const minutes = Math.floor((value - (hours * 3600)) / 60);
-      const seconds = Math.floor(value - (hours * 3600) - (minutes * 60));
+      let hours = Math.floor(value / 3600);
+      let minutes = Math.floor((value - (hours * 3600)) / 60);
+      let seconds = Math.floor(value - (hours * 3600) - (minutes * 60));
       if (minutes < 10 && hours != 0) {
         minutes = "0" + minutes;
       }
