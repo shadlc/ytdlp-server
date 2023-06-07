@@ -135,7 +135,7 @@ Get the status about download task.
   "code": 200,
   "status": "Init",
   "data": {
-    "tasks": {}
+    "tasks": []
   }
 }
 ```
