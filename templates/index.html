@@ -442,7 +442,7 @@
       const div = `
         <div class="card video-card">
           <div class="video-head">
-            <img src="`+data.thumbnail+`">
+            <img src="`+data.thumbnail.replace("http://","https://")+`">
             <input class="btn btn-request hide" type="button" onclick="videoAdd('`+data.url+`')" value="下载视频">
           </div>
           <div class="video-details">
