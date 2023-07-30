@@ -177,7 +177,7 @@ class YT_DLP():
     except Exception as e:
       return f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(END, '')
 
-  def check_cookies(self, url, cookie):
+  def check_cookie(self, url, cookie):
     if cookie:
       cookie_file = self.cookies.get('user_custom','cookies/custom.txt')
       open(cookie_file, mode='w').write(base64.b64decode(cookie).decode('utf-8'))
@@ -193,7 +193,7 @@ class YT_DLP():
   def info(self, url, mode='brief', cookie='', format=''):
     '''get information from url'''
     try:
-      cookie = self.check_cookies(url, cookie)
+      cookie = self.check_cookie(url, cookie)
       opts = self.opts.copy()
       opts['cookiefile'] = "cookies/" + self.cookies.get(cookie)
       if format:
@@ -256,7 +256,7 @@ class YT_DLP():
   def add(self, url, cookie='', format=''):
     '''detect url and start download'''
     try:
-      query_info = self.info(url, cookies=cookie, format=format)
+      query_info = self.info(url, cookie=cookie, format=format)
       info = query_info['data']
       if 'url' not in info:
         return query_info
