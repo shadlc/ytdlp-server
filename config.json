@@ -4,6 +4,7 @@
 	"download_dir": "/mnt/sda/ytdlp/",
 	"log_dir": "",
 	"ydl":{
+		"format": "bv*+ba/b",
 	    "outtmpl": {
 	    	"default": "%(title)s [%(extractor)s %(id)s]",
 	    	"chapter": "%(title)s - %(section_number)03d %(section_title)s [%(extractor)s %(id)s]"

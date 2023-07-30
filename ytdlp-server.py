@@ -1,27 +1,24 @@
 import os
-import sys
 import time
 import json
-import copy
 import flask
 import base64
 import socket
 import hashlib
-import requests
 import threading
 from http.cookiejar import LoadError
 from flask_cors import CORS
 
-from ytdlp.yt_dlp import YoutubeDL, DownloadError
+from yt_dlp import YoutubeDL, DownloadError
 
 RED = '\033[0;31m'
 GREEN = '\033[0;32m'
 BLUE = '\033[0;94m'
 YELLOW = '\033[0;33m'
-ENDC = '\033[0m'
+END = '\033[0m'
 app = flask.Flask(__name__)
 CORS(app, resources=r'/*')
-MyYTDLP = None
+my_yt_dlp = None
 
 CONFIG_FILE = 'config.json'
 LOG_FILE = 'latest.log'
@@ -32,25 +29,27 @@ def index():
 
 @app.route('/status')
 def status():
-  global MyYTDLP
-  result = MyYTDLP.task_status()
+  global my_yt_dlp
+  result = my_yt_dlp.task_status()
   return restful(200, result['status'], result['data'])
 
 @app.route('/download', methods=['GET','POST'])
 def download():
-  global MyYTDLP
+  global my_yt_dlp
   if flask.request.method == 'POST':
     data = json.loads(flask.request.get_data().decode("utf-8"))
-    url = data['url']
-    cookies = data['cookies']
+    url = data.get('url')
+    cookie = data.get('cookie')
+    format = data.get('format')
   else:
     result = flask.request.args
-    url = result['url'] if 'url' in result else ''
-    cookies = ''
+    url = result.get('url')
+    cookie = ''
+    format = ''
   if url == '':
     return restful(400, 'No URL input')
   else:
-    result = MyYTDLP.add(url, cookies)
+    result = my_yt_dlp.add(url, cookie, format)
     if 'Added' == result['status']:
       return restful(202, result['status'], result['data'])
     else:
@@ -58,48 +57,50 @@ def download():
 
 @app.route('/info', methods=['GET','POST'])
 def info():
-  global MyYTDLP
+  global my_yt_dlp
   if flask.request.method == 'POST':
-    result = json.loads(flask.request.get_data().decode("utf-8"))
-    cookies = result.get('cookies')
-    mode = result.get('mode')
-    url = result.get('url')
+    data = json.loads(flask.request.get_data().decode("utf-8"))
+    url = data.get('url')
+    mode = data.get('mode')
+    cookie = data.get('cookie')
+    format = data.get('format')
   else:
-    result = flask.request.args
-    cookies = result.get('cookies')
-    mode = result.get('mode')
-    url = result.get('url')
+    data = flask.request.args
+    url = data.get('url')
+    mode = data.get('mode')
+    cookie = ''
+    format = ''
   if url == '':
     return restful(400, 'No URL input')
   else:
     if mode == 'raw':
-      result = MyYTDLP.info(url,'raw', cookies)
+      result = my_yt_dlp.info(url,'raw', cookie, format)
       return restful(200, result['status'], result['data'])
     else:
-      result = MyYTDLP.info(url,'brief', cookies)
+      result = my_yt_dlp.info(url,'brief', cookie, format)
       return restful(200, result['status'], result['data'])
 
 @app.route('/history')
 def history():
-  global MyYTDLP
-  if task_list := MyYTDLP.task_history():
+  global my_yt_dlp
+  if task_list := my_yt_dlp.task_history():
     return restful(200, 'Success', task_list)
   else:
     return restful(200, 'No history yet')
 
 @app.route('/clear_download')
 def clear_download():
-  global MyYTDLP
-  MyYTDLP.download_list = []
-  MyYTDLP.error_code = 0
-  MyYTDLP.status = 'Cleared'
-  return restful(200, MyYTDLP.status)
+  global my_yt_dlp
+  my_yt_dlp.download_list = []
+  my_yt_dlp.error_code = 0
+  my_yt_dlp.status = 'Cleared'
+  return restful(200, my_yt_dlp.status)
 
 @app.route('/clear_history')
 def clear_history():
-  global MyYTDLP
-  MyYTDLP.download_history = []
-  return restful(200, MyYTDLP.status)
+  global my_yt_dlp
+  my_yt_dlp.download_history = []
+  return restful(200, my_yt_dlp.status)
 
 def restful(code=200, status='', data=''):
   response = {
@@ -111,16 +112,15 @@ def restful(code=200, status='', data=''):
 
 
 
-class YTDLP():
+class YT_DLP():
   def __init__(self, opts):
     '''init yt_dlp class'''
-    super(YTDLP, self).__init__()
-    self.download_dir = opts['download_dir']
-    self.opts = opts['ydl']
+    super(YT_DLP, self).__init__()
+    self.download_dir = opts.get('download_dir')
+    self.opts = opts.get('ydl')
     self.opts['paths'] = {'home':self.download_dir}
-    self.opts['logger'] = self.Logger(opts['log_dir'] + LOG_FILE)
-    self.cookies = opts['cookies']
-    self.cookies_used = None
+    self.opts['logger'] = self.Logger(opts.get('log_dir') + LOG_FILE)
+    self.cookies = opts.get('cookies')
     self.download_list = []
     self.download_history = []
     self.rpc_list = {}
@@ -143,7 +143,7 @@ class YTDLP():
           self.status = 'Listening'
         else:
           self.status = 'Downloading'
-      time.sleep(1);
+      time.sleep(1)
 
   def download(self, url, info):
     '''yt_dlp download method'''
@@ -153,6 +153,8 @@ class YTDLP():
         opts['paths'] = {'home':self.download_dir.rstrip('/')}
       else:
         opts['paths'] = {'home':self.download_dir.rstrip('/') + '/' + info['title']}
+      opts['cookiefile'] = "cookies/" + self.cookies.get(info['cookie'])
+      opts['format'] = info['format']
       # port = find_available_port()
       # if port:
       #   md5 = sum_md5(url)
@@ -161,7 +163,7 @@ class YTDLP():
       #   opts['external_downloader_args'].append(f'--enable-rpc=true')
       #   opts['external_downloader_args'].append(f'--rpc-listen-all=true')
       #   opts['external_downloader_args'].append(f'--rpc-allow-origin-all=true')
-      #   print(f'{YELLOW}Start download for [{url}] with aria2c rpc port at localhost:{port} which GID is {md5[:16]}{ENDC}')
+      #   print(f'{YELLOW}Start download for [{url}] with aria2c rpc port at localhost:{port} which GID is {md5[:16]}{END}')
       #   self.rpc_list[url] = {'port': port, 'token': md5[:16]}
       # else:
       #   opts['external_downloader_args'].append('--enable-rpc=false')
@@ -170,44 +172,47 @@ class YTDLP():
       ydl.add_progress_hook(self.progress_hook)
       self.status = 'Downloading'
       error_code = ydl.download(url)
-      print(f'\n{GREEN}Success download for {url}{ENDC}')
+      print(f'\n{GREEN}Success download for {url}{END}')
       return error_code
     except Exception as e:
-      raise e
-      return f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
+      return f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(END, '')
 
-  def check_cookies(self, url, cookies):
-    if cookies:
-      self.opts['cookiefile'] = self.cookies.get('user_custom','cookies/custom.txt')
-      open(self.opts['cookiefile'], mode='w').write(base64.b64decode(cookies).decode('utf-8'))
-      self.cookies_used = ''
-      return
-    else:
-      self.opts['cookiefile'] = 'Null'
-      self.cookies_used = None
+  def check_cookies(self, url, cookie):
+    if cookie:
+      cookie_file = self.cookies.get('user_custom','cookies/custom.txt')
+      open(cookie_file, mode='w').write(base64.b64decode(cookie).decode('utf-8'))
+      return 'user_custom'
 
     for keyword in self.cookies:
       file = self.cookies[keyword]
       if keyword in url and os.path.exists(f"cookies/{file}"):
-        self.opts['cookiefile'] = f"cookies/{file}"
-        self.cookies_used = keyword
+        return keyword
+    
+    return 'Null'
 
-  def info(self, url, mode='brief', cookies=''):
-    '''get informations from url'''
+  def info(self, url, mode='brief', cookie='', format=''):
+    '''get information from url'''
     try:
-      self.check_cookies(url, cookies)
-      extract_info = YoutubeDL(self.opts).extract_info(url, download=False)
+      cookie = self.check_cookies(url, cookie)
+      opts = self.opts.copy()
+      opts['cookiefile'] = "cookies/" + self.cookies.get(cookie)
+      if format:
+        opts['format'] = format
+      else:
+        opts['format'] = self.opts.get('format')
+      extract_info = YoutubeDL(opts).extract_info(url, download=False)
       if mode == 'raw':
         return {'status': 'Success', 'data': extract_info}
       info = {}
+      info['title'] = extract_info.get('title', 'unknown')
+      info['url'] = extract_info.get('webpage_url', '')
+      info['cookie'] = cookie
+      info['format'] = opts['format']
       if 'entries' in extract_info:
         info['type'] = 'playlist'
-        info['title'] = extract_info.get('title', 'unknown')
-        info['url'] = extract_info.get('webpage_url', '')
         info['uploader'] = extract_info.get('entries')[0].get('uploader', '')
         info['count'] = len(extract_info.get('entries'))
         info['entires'] = []
-        info['cookies'] = self.cookies_used
         for i in range(info['count']):
           entries = extract_info.get('entries')
           item = {}
@@ -234,7 +239,6 @@ class YTDLP():
         info['resolution'] = extract_info.get('resolution', '')
         info['ext'] = extract_info.get('ext', 'unknown')
         info['size'] = extract_info.get('filesize_approx', '')
-        info['cookies'] = self.cookies_used
       if mode == 'brief':
         return {'status': 'Success', 'data': info}
       else:
@@ -242,16 +246,17 @@ class YTDLP():
     except LoadError:
       return {'status': 'Load cookies failed. See more <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
     except Exception as e:
-      raise e
-      status = f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
-      if type(e) == DownloadError:
+      status = f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(END, '')
+      if 'available formats' in str(e):
+        status += '. See more <a href="https://github.com/yt-dlp/yt-dlp#format-selection">Here</a>'
+      elif 'Unsupported URL' in str(e):
         status += '. See more <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">Here</a>'
       return {'status': status, 'data': ''}
 
-  def add(self, url, cookies=''):
+  def add(self, url, cookie='', format=''):
     '''detect url and start download'''
     try:
-      query_info = self.info(url, cookies)
+      query_info = self.info(url, cookies=cookie, format=format)
       info = query_info['data']
       if 'url' not in info:
         return query_info
@@ -265,9 +270,10 @@ class YTDLP():
     except LoadError:
       return {'status': 'Load Cookies failed. See more from <a href="http://fileformats.archiveteam.org/wiki/Netscape_cookies.txt">Here</a>', 'data': ''}
     except Exception as e:
-      raise e
-      status = f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(ENDC, '')
-      if type(e) == DownloadError:
+      status = f'{e}'.replace(RED, '').replace(GREEN, '').replace(BLUE, '').replace(END, '')
+      if 'available formats' in str(e):
+        status += '. See more <a href="https://github.com/yt-dlp/yt-dlp#format-selection">Here</a>'
+      elif 'Unsupported URL' in str(e):
         status += '. See more <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">Here</a>'
       return {'status': status, 'data': ''}
 
@@ -277,7 +283,6 @@ class YTDLP():
       self.status = 'Downloading'
     if self.status == 'finished' and self.download_list != []:
       self.status = 'Downloading'
-    # self.count_process()
     return {'status': self.status, 'data': self.download_list}
 
   def task_history(self):
@@ -345,6 +350,6 @@ def find_available_port(interface=''):
 
 if __name__ == '__main__':
   config = import_json(CONFIG_FILE)
-  MyYTDLP = YTDLP(config)
+  my_yt_dlp = YT_DLP(config)
   print('yt_dlp server start!')
   app.run(config['host'], config['port'])

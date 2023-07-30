@@ -69,6 +69,11 @@
         border-radius: 0.5rem;
         padding: 0.2rem 0.5rem;
       }
+      #format_input {
+        border: 2px solid;
+        border-radius: 0.5rem;
+        padding: 0.2rem 0.5rem;
+      }
       .hide {
         display: none !important;
       }
@@ -80,9 +85,12 @@
       }
       .container {
         position: relative;
-        width: 100%;
+        width: 95%;
         max-width: 1200px;
         text-align: center;
+      }
+      .inline-block {
+        display: inline-block;
       }
       .btn-group {
         margin: 0.4rem 1rem;
@@ -109,7 +117,16 @@
       .btn:disabled {
         cursor: not-allowed;
       }
-      .file_input {
+      .help {
+        display: inline-block;
+        padding-bottom: 0.1rem;
+        width: 1rem;
+        height: 0.9rem;
+        font-size: 0.8rem;
+        border: 2px solid;
+        border-radius: 100%;
+      }
+      .file-input {
         display: inline-block;
         margin: 0.2rem;
         border: 2px solid;
@@ -117,12 +134,12 @@
         padding-right: 0.5rem;
         white-space: nowrap;
       }
-      .file_input .btn {
+      .file-input .btn {
         margin: unset;
         border: none;
         border-right: 2px solid;
       }
-      .file_input span {
+      .file-input span {
         display: inline-block;
         font-size: small;
         padding-left: 0.1rem;
@@ -246,20 +263,31 @@
   </head>
   <body class="center">
     <div class="container">
-      <h1><a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a></h1>
+      <h1><a href="https://github.com/yt-dlp/yt-dlp" target="_blank">yt-dlp</a></h1>
       <div>
         <input type="text" id="url_input" placeholder="粘贴URL并回车直接下载">
       </div>
       <div class="btn-group">
         <input class="btn btn-request" type="button" onclick="videoQuery()" value="查询详情">
         <input class="btn btn-request" type="button" onclick="videoAdd()" value="下载视频">
-        <div class="file_input">
-          <input class="btn" type="button" onclick="setCookies()" value="设置">
-          <span>当前Cookies: </span>
-          <span id="cookies_type">自动选择</span>
-        </div>
       </div>
       <div class="search-notify"></div>
+      <details>
+        <summary>
+          下载设置
+        </summary>
+        <div class="list">
+          <div class="file-input">
+            <input class="btn" type="button" onclick="setCookie()" value="设置">
+            <span>当前Cookie: </span>
+            <span id="cookie_type">自动选择</span>
+          </div>
+          <div class="inline-block">
+            <a class="help" href="https://github.com/yt-dlp/yt-dlp#format-selection" target="_blank" title="如何填写视频格式选择器">?</a>
+            <input type="text" id="format_input" placeholder="视频格式选择器">
+          </div>
+        </div>
+      </details>
       <details open>
         <summary>视频详情
           <a href="javascript:;" onclick="videoQueryListClear()">清空</a>
@@ -306,10 +334,10 @@
     let offline = false;
     let downloading_list = {};
     let queryTimeout = null;
-    let custom_cookies = null;
+    let custom_cookie = null;
 
     const url_input = document.getElementById("url_input");
-    const cookies_type = document.getElementById("cookies_type");
+    const cookie_type = document.getElementById("cookie_type");
     const color_scheme = document.getElementById("color_scheme");
 
     url_input.addEventListener("keydown", (e)=>{
@@ -443,7 +471,7 @@
         <div class="card video-card">
           <div class="video-head">
             <img src="`+data.thumbnail.replace("http://","https://")+`">
-            <input class="btn btn-request hide" type="button" onclick="videoAdd('`+data.url+`')" value="下载视频">
+            <input class="btn btn-request hide" type="button" onclick="videoAdd('`+data.url+`', '`+data.format+`')" value="下载视频">
           </div>
           <div class="video-details">
             <a href="`+data.url+`">`+data.title+`</a>
@@ -522,13 +550,14 @@
       if (url == null) {
         url = document.getElementById("url_input").value;
       }
-      if (custom_cookies) {
-        post(infoUrl, JSON.stringify({"url": url, "cookies": custom_cookies}),(e)=>{
+      format = document.getElementById("format_input").value;
+      if (custom_cookie || format) {
+        post(infoUrl, JSON.stringify({"url": url, "cookie": custom_cookie, "format": format}),(e)=>{
           if (e != null && e.data != null) {
             showVideoInfo(e.data);
             url_input.value = "";
-            if (e.data.cookies) {
-              cookies_type.innerHTML = e.data.cookies;
+            if (e.data.cookie) {
+              cookie_type.innerHTML = e.data.cookie;
             }
           }
           requestingMode(false);
@@ -538,27 +567,30 @@
           if (e != null && e.data != null) {
             showVideoInfo(e.data);
             url_input.value = "";
-            if (e.data.cookies) {
-              cookies_type.innerHTML = e.data.cookies;
+            if (e.data.cookie) {
+              cookie_type.innerHTML = e.data.cookie;
             }
           }
           requestingMode(false);
         });
       }
     }
-    function videoAdd(url){
+    function videoAdd(url, format){
       requestingMode(true);
       document.querySelector(".search-notify").innerHTML = "正在添加至下载列表...";
       if (url == null) {
         url = document.getElementById("url_input").value;
       }
-      if (custom_cookies) {
-        post(downloadUrl, JSON.stringify({"url": url, "cookies": custom_cookies}),(e)=>{
+      if (format == null) {
+        format = document.getElementById("format_input").value;
+      }
+      if (custom_cookie || format) {
+        post(downloadUrl, JSON.stringify({"url": url, "cookie": custom_cookie, "format": format}),(e)=>{
           if (e != null && e.data != null) {
             queryDownload();
             url_input.value = "";
-            if (e.data.cookies) {
-              cookies_type.innerHTML = e.data.cookies;
+            if (e.data.cookie) {
+              cookie_type.innerHTML = e.data.cookie;
             }
           }
           requestingMode(false);
@@ -568,24 +600,24 @@
           if (e != null && e.data != null) {
             queryDownload();
             url_input.value = "";
-            if (e.data.cookies) {
-              cookies_type.innerHTML = e.data.cookies;
+            if (e.data.cookie) {
+              cookie_type.innerHTML = e.data.cookie;
             }
           }
           requestingMode(false);
         });
       }
     }
-    function setCookies(){
+    function setCookie(){
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "text/plain"
       input.addEventListener("change", () => {
         const file = input.files[0];
-        cookies_type.innerHTML = file.name;
+        cookie_type.innerHTML = file.name;
         const reader = new FileReader();
         reader.addEventListener("load", () => {
-          custom_cookies = reader.result.split(",")[1];
+          custom_cookie = reader.result.split(",")[1];
         });
         reader.readAsDataURL(file);
       });
@@ -645,7 +677,7 @@
       document.querySelector(".video-info-list").innerHTML = "";
     }
     function videoDownloadListClear(){
-      const flag = confirm("该操作会清空下载列表(由于ytdlp限制无法停止正在下载，只是清空记录)，是否继续？");
+      const flag = confirm("该操作会清空下载列表(由于yt_dlp限制无法停止正在下载，只是清空记录)，是否继续？");
       if (flag) {
         get(clearDownloadUrl);
         queryDownload();
