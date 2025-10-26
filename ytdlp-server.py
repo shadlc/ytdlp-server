@@ -9,7 +9,7 @@ import threading
 from http.cookiejar import LoadError
 from flask_cors import CORS
 
-from yt_dlp import YoutubeDL, DownloadError
+from yt_dlp import YoutubeDL
 
 RED = '\033[0;31m'
 GREEN = '\033[0;32m'
@@ -31,7 +31,7 @@ def index():
 def status():
   global my_yt_dlp
   result = my_yt_dlp.task_status()
-  return restful(200, result['status'], result['data'])
+  return restful(200, result['status'], {"tasks": result['data']})
 
 @app.route('/download', methods=['GET','POST'])
 def download():
@@ -143,7 +143,7 @@ class YT_DLP():
           self.status = 'Listening'
         else:
           self.status = 'Downloading'
-      time.sleep(1)
+      time.sleep(0.1)
 
   def download(self, url, info):
     '''yt_dlp download method'''
@@ -187,15 +187,15 @@ class YT_DLP():
       file = self.cookies[keyword]
       if keyword in url and os.path.exists(f"cookies/{file}"):
         return keyword
-    
-    return 'Null'
+    return
 
   def info(self, url, mode='brief', cookie='', format=''):
     '''get information from url'''
     try:
       cookie = self.check_cookie(url, cookie)
       opts = self.opts.copy()
-      opts['cookiefile'] = "cookies/" + self.cookies.get(cookie)
+      if cookie:
+        opts['cookiefile'] = "cookies/" + self.cookies.get(cookie)
       if format:
         opts['format'] = format
       else:
@@ -280,8 +280,6 @@ class YT_DLP():
   def task_status(self):
     '''return running status and downloading list'''
     if self.status == 'Added':
-      self.status = 'Downloading'
-    if self.status == 'finished' and self.download_list != []:
       self.status = 'Downloading'
     return {'status': self.status, 'data': self.download_list}
 

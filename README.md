@@ -61,11 +61,9 @@ Directly download the video via yt-dlp.
   
   ` POST http://127.0.0.1:8848/download `
 * #### post params
-  ` url: The url that input for yt-dlp. `
-
-  ` cookie: Base64 encode Netscape format cookie file. `
+  ` cookies: Base64 encode Netscape format cookies file. `
   
-  ` format: The video format selector for yt-dlp. `
+  ` url: The url that input for yt-dlp. `
   
 * ##### response
 ```
@@ -74,18 +72,15 @@ Directly download the video via yt-dlp.
   "status": "Added",
   "data": {
     "title": "Rick Astley - Never Gonna Give You Up (Official Music Video)",
-    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "cookie": "youtube",
-    "format": "bv*+ba/b",
-    "type": "video",
-    "uploader": "Rick Astley",
-    "site": "youtube",
     "thumbnail": "https://i.ytimg.com/vi_webp/dQw4w9WgXcQ/maxresdefault.webp",
+    "site": "youtube",
+    "uploader": "Rick Astley",
     "id": "dQw4w9WgXcQ",
     "duration": 212,
     "resolution": "1920x1080",
     "ext": "webm",
-    "size": 3437753
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "cookies": 'youtube'
   }
 }
 ```
@@ -100,13 +95,11 @@ Get video information via yt-dlp.
   
   ` POST http://127.0.0.1:8848/info `
 * #### post params
+  ` cookies: Base64 encode Netscape format cookies file. `
+  
   ` url: The url that input for yt-dlp. `
   
   ` mode: Default is "brief" and optional in "brief" or "raw". `
-
-  ` cookie: Base64 encode Netscape format cookies file. `
-  
-  ` format: The video format selector for yt-dlp. `
   
 * ##### response
 ```
@@ -115,18 +108,16 @@ Get video information via yt-dlp.
   "status": "Success",
   "data": {
     "title": "Rick Astley - Never Gonna Give You Up (Official Music Video)",
-    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "cookie": "youtube",
-    "format": "bv*+ba/b",
-    "type": "video",
-    "uploader": "Rick Astley",
-    "site": "youtube",
     "thumbnail": "https://i.ytimg.com/vi_webp/dQw4w9WgXcQ/maxresdefault.webp",
+    "site": "youtube",
+    "uploader": "Rick Astley",
     "id": "dQw4w9WgXcQ",
     "duration": 212,
     "resolution": "1920x1080",
     "ext": "webm",
-    "size": 3437753
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "size": 59080956,
+    "cookies": 'youtube'
   }
 }
 ```

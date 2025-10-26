@@ -5,10 +5,10 @@
 	"log_dir": "",
 	"ydl":{
 		"format": "bv*+ba/b",
-	    "outtmpl": {
-	    	"default": "%(title)s [%(extractor)s %(id)s]",
-	    	"chapter": "%(title)s - %(section_number)03d %(section_title)s [%(extractor)s %(id)s]"
-	    },
+		"outtmpl": {
+			"default": "%(title)s [%(extractor)s %(id)s]",
+			"chapter": "%(title)s - %(section_number)03d %(section_title)s [%(extractor)s %(id)s]"
+		},
 		"proxy": "",
 		"external_downloader": "aria2c",
 		"external_downloader_args": [
@@ -16,7 +16,13 @@
 			"-k1M",
 			"--retry-wait=3"
 		],
-		"extractor_args": "youtubetab:skip=authcheck youtube:player-client=web",
+		"extractor_args": {
+			"crunchyrollbeta": {
+				"format": [
+					"vo_adaptive_hls"
+				]
+			}
+		},
 		"ratelimit": "30000000"
 	},
 	"cookies": {

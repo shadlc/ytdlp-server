@@ -3,7 +3,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer">
-    <title>Youtube Download Plus</title>
+    <title>Youtube Downloader Plus</title>
     <link rel="shortcut icon" href="static/favicon.png"/>
     <style>
       @media (max-width: 600px) {
@@ -284,7 +284,7 @@
           </div>
           <div class="inline-block">
             <a class="help" href="https://github.com/yt-dlp/yt-dlp#format-selection" target="_blank" title="如何填写视频格式选择器">?</a>
-            <input type="text" id="format_input" placeholder="视频格式选择器">
+            <input type="text" id="format_input" placeholder="视频格式选择器(bv*+ba/b)">
           </div>
         </div>
       </details>
@@ -639,11 +639,11 @@
     function queryDownload(status=false){
       clearTimeout(queryTimeout);
       get(statusUrl, (de)=>{
-        if (de == null || de.data == null){
+        if (de == null || de.data.tasks == null){
           queryTimeout = setTimeout(queryDownload, 5000);
           return;
         }
-        if (de.data.length == 0){
+        if (de.data.tasks.length == 0){
           queryTimeout = setTimeout(queryDownload, 3000);
         } else {
           queryTimeout = setTimeout(queryDownload, 1000);
@@ -652,21 +652,21 @@
             Notification.requestPermission((s)=>{ document.querySelector(".search-notify").innerHTML = ""; });
           }
         }
-        if ("Notification" in window && downloading_list.length >= 1 && downloading_list.length - 1 == de.data.length && Notification.permission == "granted") {
+        if ("Notification" in window && downloading_list.length >= 1 && downloading_list.length - 1 == de.data.tasks.length && Notification.permission == "granted") {
           doNotify("从" + downloading_list[0].site + "获取的视频 ⌈" + downloading_list[0].title + "⌋ 已下载完成！");
         }
-        if (JSON.stringify(downloading_list) != JSON.stringify(de.data)){
-          showVideoCard(de.data, ".video-downloading-list");
-          if(de.data.length !=0) {
-            document.querySelector("#downloading-count").innerHTML = "(" + de.data.length + ")";
-            document.querySelector("#downloading-span").innerHTML = "(正在下载: <a href=" + de.data[0].url + ">" + de.data[0].title + "</a>)";
+        if (JSON.stringify(downloading_list) != JSON.stringify(de.data.tasks)){
+          showVideoCard(de.data.tasks, ".video-downloading-list");
+          if(de.data.tasks.length !=0) {
+            document.querySelector("#downloading-count").innerHTML = "(" + de.data.tasks.length + ")";
+            document.querySelector("#downloading-span").innerHTML = "(正在下载: <a href=" + de.data.tasks[0].url + ">" + de.data.tasks[0].title + "</a>)";
           } else {
             document.querySelector("#downloading-count").innerHTML = "";
             document.querySelector("#downloading-span").innerHTML = "";
           }
           document.querySelector(".search-notify").innerHTML = "<p>" + de.status + "</p>";
           queryHistory();
-          downloading_list = de.data;
+          downloading_list = de.data.tasks;
         }
       }, status);
     }
